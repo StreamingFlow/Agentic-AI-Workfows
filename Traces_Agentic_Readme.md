@@ -10,6 +10,9 @@ Both versions produce:
 - an **agent trace**, describing decisions and tool use; and
 - a **dispel4py monitoring trace**, describing workflow execution and performance.
 
+> [!IMPORTANT]
+> The second version is a **parallel multi-worker agentic workflow**, not a communicating multi-agent system. It runs four independent process instances of the same LLM-agent PE. These workers do not talk to one another, exchange messages, share memory, delegate tasks, or request readings from one another. Each worker receives a self-contained event with its required historical and neighbouring-sensor evidence already attached.
+
 The complete runnable Google Colab notebook is:
 
 <https://colab.research.google.com/drive/1asiWZ_I_8HCmFbbh2YmSqAAUQ3gbfq03?usp=sharing>
@@ -47,7 +50,7 @@ The simple workflow now runs with `timed_simple`. It records both:
 - the semantic agent trace in `agentic_sensor_results.jsonl`; and
 - dispel4py timing and graph information in `monitoring_simple/`.
 
-### Iteration 3: monitored multi-process workflow
+### Iteration 3: monitored parallel multi-worker workflow
 
 The parallel-safe workflow now runs with `timed_multi -n 16`. It records:
 
@@ -99,7 +102,9 @@ Events are processed sequentially, so later events can use evidence learned from
 
 There is **one LLM agent** in the simple version. `timed_simple` uses one concrete instance of every PE; the supplied run therefore has seven PE instances in total, but only `LLMSensorAgentPE` is an LLM agent.
 
-## 4. Version B: multi-process agents
+## 4. Version B: parallel multi-worker agentic workflow
+
+This version parallelises the processing of independent events. Although it creates four LLM-agent worker processes, it is **not** a multi-agent collaboration architecture. The four workers are copies of the same `ParallelLLMSensorAgentPE`, with the same role, tools and instructions.
 
 ### Input
 
@@ -123,6 +128,8 @@ The workers:
 - do **not** share mutable agent memory;
 - do **not** send evidence directly to one another; and
 - do **not** split one event across several agents.
+
+They also do **not** query one another when the LLM asks to inspect neighbouring sensors. That request is a local tool call, as explained below.
 
 One event is handled by one agent worker when it reaches the agent branch.
 
@@ -165,9 +172,60 @@ The fourth agent was available but idle because only five events required an LLM
 
 The monitoring graph labels these default connections as `communication: "None"`. Here, that means no explicit content-based grouping was configured on the connections. It does **not** mean all workers receive copies of every event. The observed counts confirm that events were partitioned, not broadcast.
 
+### What happens when an agent asks for a neighbour reading?
+
+The agent calls the local Python tool `compare_neighbouring_sensors`. The tool does **not** contact a sensor, database, shared service or another agent. It reads the `neighbour_readings` list already stored inside the current event:
+
+```text
+Pre-generation step
+    -> attaches previous_readings and neighbour_readings
+Self-contained event
+    -> assigned to one LLM-agent worker
+compare_neighbouring_sensors tool
+    -> reads that event's neighbour_readings locally
+    -> calculates temperature and humidity differences
+    -> returns the comparison to the same agent
+```
+
+For example, the event passed to one worker may already contain:
+
+```json
+{
+  "event_id": "event-0021",
+  "sensor_id": "sensor-001",
+  "temperature": 31.0,
+  "previous_readings": [],
+  "neighbour_readings": [
+    {
+      "sensor_id": "sensor-002",
+      "temperature": 22.1,
+      "humidity": 43.0,
+      "timestamp": "2026-08-06T09:20:00Z"
+    }
+  ]
+}
+```
+
+The tool compares `31.0` with `22.1` and returns the calculated difference to the same worker. It is therefore retrieving a **precomputed snapshot embedded in the event**, not making a live or inter-agent request.
+
+Consequences of this design:
+
+- the neighbour snapshot reflects the information available when the dataset was generated;
+- it cannot include a new reading produced concurrently by another worker;
+- the four LLM workers remain fully independent; and
+- adding a genuine live lookup would require shared infrastructure, such as a database, Redis service or dedicated state/evidence PE.
+
+### What terminology should be used?
+
+Use:
+
+> **Parallel multi-worker agentic workflow with four independent LLM-agent workers.**
+
+Avoid describing this implementation simply as a “multi-agent system,” because that commonly implies communication, coordination, role specialisation or shared state, none of which is implemented here.
+
 ## 5. Simple and multi versions compared
 
-| Property | Simple version | Multi version |
+| Property | Simple version | Parallel multi-worker version |
 |---|---|---|
 | Input events | 6 | 100 |
 | Sensors | 4 | 10 |
@@ -177,6 +235,8 @@ The monitoring graph labels these default connections as `communication: "None"`
 | Agent memory | Built progressively inside one agent | Precomputed evidence attached to each event |
 | Event processing | Sequential | Concurrent across PE instances |
 | Inter-agent state sharing | Not applicable | None |
+| Inter-agent communication | Not applicable | None |
+| Neighbour lookup | Reads state accumulated by the single agent | Reads the snapshot already attached to the assigned event |
 | Agent trace | `agentic_sensor_results.jsonl` | `agentic_parallel_results.jsonl` |
 | Monitoring directory | `monitoring_simple/` | `monitoring_multi/` |
 
@@ -415,4 +475,3 @@ The two trace layers provide complementary inputs for later experimentation:
 - monitoring files describe workflow structure, process allocation and performance.
 
 Before ingestion, confirm the schema required by WChef/WBench. A likely next step is to map these records into a common trace model with explicit fields for run, event, PE, worker, decision, tool call and timing. The current files intentionally preserve the native agent and dispel4py outputs so that this transformation remains transparent and reproducible.
-
