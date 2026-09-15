@@ -19,7 +19,7 @@ The complete runnable Google Colab notebook is:
 
 It is a monitored, streamlined iteration of the original agentic workflow notebook:
 
-<https://colab.research.google.com/drive/19EQjfyBnW3I2lCWD0oO2Udp3kq5rom8v?usp=sharing>
+<https://colab.research.google.com/drive/1aYdpiRRQfuU5C0uzMb3Mzav5czhwJE26?usp=sharing>
 
 ## 1. What problem are we demonstrating?
 
