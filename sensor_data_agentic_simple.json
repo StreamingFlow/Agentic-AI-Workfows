@@ -1,0 +1,56 @@
+    sensor_data = [
+    {
+        "sensor_id": "sensor-001",
+        "zone": "north",
+        "timestamp": "2026-08-06T09:00:00Z",
+        "temperature": 21.8,
+        "humidity": 42.0,
+        "battery": 83,
+        "diagnostic_note": "Routine reading. Signal is stable."
+    },
+    {
+        "sensor_id": "sensor-002",
+        "zone": "north",
+        "timestamp": "2026-08-06T09:01:00Z",
+        "temperature": 22.0,
+        "humidity": 43.0,
+        "battery": 79,
+        "diagnostic_note": "Routine reading from a neighbouring sensor."
+    },
+    {
+        "sensor_id": "sensor-001",
+        "zone": "north",
+        "timestamp": "2026-08-06T09:10:00Z",
+        "temperature": 22.2,
+        "humidity": 44.0,
+        "battery": 82,
+        "diagnostic_note": "Two packets were lost after a brief network interruption. The connection has returned."
+    },
+    {
+        "sensor_id": "sensor-003",
+        "zone": "south",
+        "timestamp": "2026-08-06T09:12:00Z",
+        "temperature": 20.9,
+        "humidity": 46.0,
+        "battery": 5,
+        "diagnostic_note": "Reading is plausible but battery is very low."
+    },
+    {
+        "sensor_id": "sensor-004",
+        "zone": "south",
+        "timestamp": "2026-08-06T09:14:00Z",
+        "temperature": 19.7,
+        "humidity": 88.0,
+        "battery": 72,
+        "diagnostic_note": "A technician heard intermittent buzzing and is unsure whether moisture entered the enclosure."
+    },
+    {
+        "sensor_id": "sensor-002",
+        "zone": "north",
+        "timestamp": "2026-08-06T09:16:00Z",
+        "temperature": 37.5,
+        "humidity": 43.0,
+        "battery": 78,
+        "diagnostic_note": "Sudden temperature increase. The sensor reports that calibration may have drifted."
+    }
+]
